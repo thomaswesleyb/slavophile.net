@@ -1,127 +1,125 @@
-import React, { Component } from 'react';
+import { useState, useCallback } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import IdiomRow from './IdiomRow';
-import { Button } from 'react-bootstrap';
-import './style/IdiomForm.css';
-import { User } from 'auth0';
 
-interface IdiomFormProps {
-    user: User;
+interface RowData {
+  id: number;
+  idiom: string;
+  translation: string;
+  definition: string;
+  example: string;
 }
 
-interface IdiomFormState {
-    rows: Array<{ id: number; idiom: string; translation: string; definition: string; example: string }>;
-}
+const emptyRow = (id: number): RowData => ({
+  id,
+  idiom: '',
+  translation: '',
+  definition: '',
+  example: '',
+});
 
-class IdiomForm extends Component<IdiomFormProps, IdiomFormState> {
-    constructor(props: IdiomFormProps) {
-        super(props);
-        this.state = {
-            rows: [{ id: 1, idiom: '', translation: '', definition: '', example: '' }]
-        };
-    }
+function IdiomForm() {
+  const { getAccessTokenSilently } = useAuth0();
+  const [rows, setRows] = useState<RowData[]>([emptyRow(1)]);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
-    handleRowChange = (id: number, field: string, value: string) => {
-        const rows = this.state.rows.map(row => {
-            if (row.id === id) {
-                return { ...row, [field]: value };
-            }
-            return row;
-        });
-        this.setState({ rows });
-    }
+  const handleRowChange = useCallback((id: number, field: string, value: string) => {
+    setRows(prev =>
+      prev.map(row => (row.id === id ? { ...row, [field]: value } : row))
+    );
+  }, []);
 
-    handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const payload = {
-            rows: this.state.rows.map(row => ({
-                ...row,
-                example: row.example || "N/A"
-            })),
-            submittedBy: this.props.user.name
-        };
-        console.log(payload);
-        const postData = async () => {
-            try {
-                const response = await fetch('/.netlify/functions/firestore-post-handler', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitMessage(null);
 
-                if (!response.ok) {
-                    if (response.status >= 400 && response.status < 500) {
-                        alert('One or more fields are empty');
-                    }
-                    return;
-                } else {
-                    alert('New idioms submitted for review');
-                }
-                const data = await response.json();
-                console.log(data);
-            } catch (error) {
-                alert('An error occurred. Please try again later.');
-                console.error('Error:', error);
-            }
-        }
-        postData();
-        alert('New idioms submitted for review');
-        this.setState({ rows: [{ id: 1, idiom: '', translation: '', definition: '', example: '' }] });
-    }
-
-    onAddBtnClick = () => {
-        const newId = this.state.rows.length + 1;
-        this.setState({
-            rows: [...this.state.rows, { id: newId, idiom: '', translation: '', definition: '', example: '' }]
-        });
-    }
-
-    onDeleteBtnClick = () => {
-        if (this.state.rows.length !== 1) {
-            const rows = this.state.rows.filter(row => row.id !== this.state.rows.length);
-            this.setState({ rows });
-        } else {
-            alert('Cannot delete the only row');
-        }
+    const payload = {
+      rows: rows.map(row => ({
+        ...row,
+        example: row.example || 'N/A',
+      })),
     };
 
-    onResetBtnClick = () => {
-        this.setState({ rows: [{ id: 1, idiom: '', translation: '', definition: '', example: '' }] });
-    };
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('/.netlify/functions/firestore-post-handler', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    render() {
-        return (
-            <div className="idiom-form-container">
-                <form onSubmit={this.handleSubmit}>
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Idiom</th>
-                            <th>Translation</th>
-                            <th>Definition</th>
-                            <th>Example</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {this.state.rows.map((row) => (
-                            <IdiomRow
-                                key={row.id}
-                                id={row.id}
-                                data={row}
-                                onRowChange={this.handleRowChange}
-                            />
-                        ))}
-                        </tbody>
-                    </table> &nbsp;
-                    <Button className="button-spacing" onClick={this.onAddBtnClick}>Add</Button> &nbsp;
-                    <Button className="button-spacing" onClick={this.onDeleteBtnClick}>Delete</Button> &nbsp;
-                    <Button className="button-spacing" type="reset" onClick={this.onResetBtnClick}>Reset</Button> &nbsp;
-                    <Button type="submit">Submit</Button>
-                </form>
-            </div>
+      if (!response.ok) {
+        setSubmitMessage(
+          response.status >= 400 && response.status < 500
+            ? 'One or more fields are empty or invalid.'
+            : 'An error occurred. Please try again later.'
         );
+        return;
+      }
+
+      setSubmitMessage('New idioms submitted for review!');
+      setRows([emptyRow(1)]);
+    } catch {
+      setSubmitMessage('An error occurred. Please try again later.');
     }
+  };
+
+  const onAddBtnClick = () => {
+    setRows(prev => [...prev, emptyRow(prev.length + 1)]);
+  };
+
+  const onDeleteBtnClick = () => {
+    if (rows.length > 1) {
+      setRows(prev => prev.slice(0, -1));
+    } else {
+      setSubmitMessage('Cannot delete the only row');
+    }
+  };
+
+  const onResetBtnClick = () => {
+    setRows([emptyRow(1)]);
+    setSubmitMessage(null);
+  };
+
+  const btnBase = "px-4 py-2 rounded cursor-pointer border-0 transition-colors mr-2";
+  const btnSecondary = `${btnBase} bg-[var(--secondary-color)] text-[var(--text-color)] hover:bg-[var(--accent-color)] hover:text-white`;
+  const btnPrimary = `${btnBase} bg-[var(--primary-color)] text-white hover:bg-[var(--accent-color)]`;
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <form onSubmit={handleSubmit}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <th className="border border-gray-300 p-2 text-left bg-gray-800 text-white">Idiom</th>
+              <th className="border border-gray-300 p-2 text-left bg-gray-800 text-white">Translation</th>
+              <th className="border border-gray-300 p-2 text-left bg-gray-800 text-white">Definition</th>
+              <th className="border border-gray-300 p-2 text-left bg-gray-800 text-white">Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <IdiomRow key={row.id} id={row.id} data={row} onRowChange={handleRowChange} />
+            ))}
+          </tbody>
+        </table>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className={btnSecondary} onClick={onAddBtnClick}>Add</button>
+          <button type="button" className={btnSecondary} onClick={onDeleteBtnClick}>Delete</button>
+          <button type="button" className={btnSecondary} onClick={onResetBtnClick}>Reset</button>
+          <button type="submit" className={btnPrimary}>Submit</button>
+        </div>
+      </form>
+      {submitMessage && (
+        <p role="status" aria-live="polite" className="mt-3 text-[var(--text-color)]">
+          {submitMessage}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default IdiomForm;

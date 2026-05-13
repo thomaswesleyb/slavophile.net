@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "idioms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "approvalStatus", "order": "ASCENDING" },
+        { "fieldPath": "idiom", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

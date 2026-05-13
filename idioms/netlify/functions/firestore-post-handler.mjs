@@ -1,65 +1,62 @@
 import db from '../../firestore.js';
+import { verifyToken } from './_auth.mjs';
+import { z } from 'zod';
 
-export default async (req, context) => {
-    try {
-        const data = await req.json();
-        // Data processing to remove empty fields
-        Object.entries(data).forEach(([field, value]) => {
-            if (field === 'example') {
-                return;
-            }
-            if (value === '') {
-                delete data[field];
-            } else if (Array.isArray(value) && value.length > 0) {
-                data[field] = value.filter(item => {
-                    if (item === '') return false;
-                    return Object.values(item).every(subValue => subValue !== '');
-                });
-                if (data[field].length === 0) {
-                    delete data[field];
-                }
-            }
-        });
+const IdiomRowSchema = z.object({
+  idiom: z.string().min(1).max(500),
+  translation: z.string().min(1).max(500),
+  definition: z.string().min(1).max(1000),
+  example: z.string().max(1000).optional(),
+});
 
-        if (Object.keys(data).length <= 1) {
-            return new Response(JSON.stringify({error: "No data to add"}), {
-                status: 400,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-        }
+const SubmitSchema = z.object({
+  rows: z.array(IdiomRowSchema).min(1).max(20),
+});
 
-        const transformedData = data.rows.map(row => {
-            return {
-                idiom: row.idiom,
-                english: row.translation,
-                definition: row.definition,
-                example: row.example || "",
-                submittedBy: data.submittedBy,
-                approvalStatus: "pending",
-                createdAt: new Date()
-            };
-        });
+export default async (req) => {
+  let payload;
+  try {
+    payload = await verifyToken(req);
+  } catch {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
-        for (const idiom of transformedData) {
-            await db.collection('idioms').add(idiom);
-        }
-
-        return new Response(JSON.stringify({ message: "Document added to Firestore" }), {
-            status: 201,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-    } catch (error) {
-        console.error("Error adding document to Firestore:", error);
-
-        return new Response(JSON.stringify({ error: "Failed to add document to Firestore" }), {
-            status: 500,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+  try {
+    const data = await req.json();
+    const parseResult = SubmitSchema.safeParse(data);
+    if (!parseResult.success) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input', details: parseResult.error.issues }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
+
+    const { rows } = parseResult.data;
+    const transformedData = rows.map(row => ({
+      idiom: row.idiom,
+      english: row.translation,
+      definition: row.definition,
+      example: row.example || '',
+      submittedBy: payload.sub,
+      approvalStatus: 'pending',
+      createdAt: new Date(),
+    }));
+
+    for (const idiom of transformedData) {
+      await db.collection('idioms').add(idiom);
+    }
+
+    return new Response(JSON.stringify({ message: 'Document added to Firestore' }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch {
+    return new Response(JSON.stringify({ error: 'Failed to add document to Firestore' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 };

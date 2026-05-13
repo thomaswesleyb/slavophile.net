@@ -1,58 +1,23 @@
-.welcome {
-  text-align: center;
-  padding: 2rem;
-}
-
-.welcome h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.welcome p {
-  font-size: 1.2rem;
-  margin-bottom: 2rem;
-}
-
-.welcome nav ul {
-  list-style-type: none;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.welcome nav ul li {
-  margin: 0;
-}
-
-.welcome nav ul li a {
-  color: #61dafb;
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border: 2px solid #61dafb;
-  border-radius: 5px;
-  transition: background-color 0.3s, color 0.3s;
-}
-
-.welcome nav ul li a:hover {
-  background-color: #61dafb;
-  color: white;
-}
-
 :root {
-  --primary-color: #8B0000FF; /* Dark Red */
-  --secondary-color: #FFD700; /* Gold */
-  --accent-color: #7D0000FF; /* Darker Red */
-  --background-color: #F5F5DC; /* Beige */
-  --text-color: #2F4F4F; /* Dark Slate Gray */
+  --primary-color: #8B0000;
+  --secondary-color: #FFD700;
+  --accent-color: #7D0000;
+  --background-color: #F5F5DC;
+  --text-color: #2F4F4F;
   --heading-font: 'Roboto Slab', serif;
   --body-font: 'Open Sans', sans-serif;
+
+  /* Cards theme */
+  --card-background: lightgoldenrodyellow;
+  --card-text: black;
 }
 
 body {
   background-color: var(--background-color);
   color: var(--text-color);
   font-family: var(--body-font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -69,27 +34,132 @@ a:hover {
   color: var(--accent-color);
 }
 
-.header {
-  background-color: var(--primary-color);
-  color: var(--background-color);
+/* Shared button styles (used by Register, Login forms) */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .btn-primary {
   background-color: var(--primary-color);
-  border-color: var(--primary-color);
+  color: white;
 }
 
 .btn-primary:hover {
   background-color: var(--accent-color);
-  border-color: var(--accent-color);
 }
 
 .btn-secondary {
   background-color: var(--secondary-color);
-  border-color: var(--secondary-color);
+  color: var(--text-color);
 }
 
 .btn-secondary:hover {
   background-color: var(--accent-color);
-  border-color: var(--accent-color);
+  color: white;
+}
+
+/* Loading skeleton animation */
+.skeleton-row {
+  height: 2rem;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Shared page layout classes */
+.idiom-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1200px;
+}
+
+.idiom-page-header {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  text-align: center;
+  padding: 1rem;
+  width: 100%;
+  margin-top: 60px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-table-container {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  width: 100%;
+  max-width: 1200px;
+}
+
+.profile-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-table th,
+.profile-table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
+}
+
+.profile-table th {
+  background-color: #333;
+  color: white;
+}
+
+.profile-picture {
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+}
+
+.my-idioms-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.my-idioms-button:hover {
+  background-color: var(--accent-color);
+}
+
+.authButton {
+  color: #61dafb;
+  text-decoration: none;
+  font-size: 1rem;
+  border: 2px solid #61dafb;
+  border-radius: 5px;
+  padding: 0.5rem 1rem;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.authButton:hover {
+  background-color: #61dafb;
+  color: white;
 }

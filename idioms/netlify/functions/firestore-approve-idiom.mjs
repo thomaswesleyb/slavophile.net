@@ -2,9 +2,9 @@ import db from '../../firestore.js';
 import { verifyToken } from './_auth.mjs';
 import { z } from 'zod';
 
-const InitSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  email: z.string().email().optional(),
+const ApproveSchema = z.object({
+  idiom_id: z.string().min(1).max(200),
+  action: z.enum(['approve', 'reject']),
 });
 
 export default async (req) => {
@@ -18,9 +18,18 @@ export default async (req) => {
     });
   }
 
+  // Verify admin status
+  const userDoc = await db.collection('users').doc(payload.sub).get();
+  if (!userDoc.exists || !userDoc.data().admin) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const data = await req.json();
-    const parseResult = InitSchema.safeParse(data);
+    const parseResult = ApproveSchema.safeParse(data);
     if (!parseResult.success) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
         status: 400,
@@ -28,25 +37,11 @@ export default async (req) => {
       });
     }
 
-    const { name, email } = parseResult.data;
-    const userId = payload.sub;
-    const userDocRef = db.collection('users').doc(userId);
-    const userDoc = await userDocRef.get();
+    const { idiom_id, action } = parseResult.data;
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    await db.collection('idioms').doc(idiom_id).update({ approvalStatus: newStatus });
 
-    if (!userDoc.exists) {
-      await userDocRef.set({
-        name: name ?? '',
-        email: email ?? '',
-        idioms: [],
-        createdAt: new Date().toISOString(),
-      });
-      return new Response(JSON.stringify({ message: 'User initialized successfully' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    return new Response(JSON.stringify({ message: 'User already exists' }), {
+    return new Response(JSON.stringify({ message: `Idiom ${newStatus}` }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

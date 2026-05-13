@@ -1,59 +1,64 @@
 import db from '../../firestore.js';
+import { verifyToken } from './_auth.mjs';
+import { z } from 'zod';
 
-export default async (req, context) => {
-    try {
-        const data = await req.json();
-        const { user_id, idiom_id } = data;
+const SaveSchema = z.object({
+  idiom_id: z.string().min(1).max(200),
+});
 
-        // Reference the user's document using their Auth0 user ID
-        const userDocRef = db.collection('users').doc(user_id);
+export default async (req) => {
+  let payload;
+  try {
+    payload = await verifyToken(req);
+  } catch {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
-        // Get the user document
-        const userDoc = await userDocRef.get();
-        if (!userDoc.exists) {
-            return new Response(JSON.stringify({ message: 'User does not exist' }), {
-                status: 404,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-        }
-
-        // Check if the idiomId already exists in the idioms array
-        const userData = userDoc.data();
-        if (userData.idioms && userData.idioms.includes(idiom_id)) {
-            return new Response(JSON.stringify({ message: 'Idiom already exists' }), {
-                status: 409,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-        }
-
-        const currentIdioms = userData.idioms || [];
-
-        if (!currentIdioms.includes(idiom_id)) {
-            currentIdioms.push(idiom_id);
-        }
-
-        // Update the idioms array
-        await userDocRef.update({
-            idioms: currentIdioms
-        });
-
-        return new Response(JSON.stringify({ message: 'Idiom added successfully' }), {
-            status: 200,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-    } catch (error) {
-        console.error('Error adding idiom to user:', error);
-        return new Response(JSON.stringify({ message: 'Internal server error', error: error.message }), {
-            status: 500,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+  try {
+    const data = await req.json();
+    const parseResult = SaveSchema.safeParse(data);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
+
+    const { idiom_id } = parseResult.data;
+    const authenticatedUserId = payload.sub;
+    const userDocRef = db.collection('users').doc(authenticatedUserId);
+    const userDoc = await userDocRef.get();
+
+    if (!userDoc.exists) {
+      return new Response(JSON.stringify({ message: 'User does not exist' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userData = userDoc.data();
+    if (userData.idioms && userData.idioms.includes(idiom_id)) {
+      return new Response(JSON.stringify({ message: 'Idiom already exists' }), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const currentIdioms = userData.idioms || [];
+    currentIdioms.push(idiom_id);
+    await userDocRef.update({ idioms: currentIdioms });
+
+    return new Response(JSON.stringify({ message: 'Idiom added successfully' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ message: 'Internal server error', error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 };

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /profile
+Disallow: /my-idioms
+Sitemap: https://russianidioms.com/sitemap.xml

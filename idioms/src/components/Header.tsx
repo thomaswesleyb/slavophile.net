@@ -1,66 +1,53 @@
 import { Link } from "react-router-dom";
-import './style/Header.css';
 import { useEffect } from 'react';
 import { useAuth0 } from "@auth0/auth0-react";
 import LoginButton from "./buttons/LoginButton.tsx";
 
 export function Header() {
-    const { user, isLoading } = useAuth0();
+  const { user, isLoading, getAccessTokenSilently } = useAuth0();
 
-    const initializeUser = async (userId: string | undefined, name: string | undefined, email: string | undefined) => {
-        try {
-            const response = await fetch('/.netlify/functions/firestore-initialize-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId,
-                    name,
-                    email,
-                }),
-            });
+  const initializeUser = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      await fetch('/.netlify/functions/firestore-initialize-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: user?.name,
+          email: user?.email,
+        }),
+      });
+    } catch {
+      // silently fail — user initialization is best-effort
+    }
+  };
 
-            const data = await response.json();
+  useEffect(() => {
+    if (user) {
+      initializeUser();
+    }
+  }, [user]); // getAccessTokenSilently is stable, intentionally omitted
 
-            if (response.ok) {
-                console.log(data.message);
-            } else {
-                console.error('Error:', data.message);
-            }
-        } catch (error) {
-            console.error('Error initializing user:', error);
-        }
-    };
-
-    useEffect(() => {
-        if (user) {
-            initializeUser(user.sub, user.name, user.email);
-        }
-    }, [user]);
-
-    return (
-        <header className="header">
-            <Link to="/" className="headerTitle">
-                <h1>Russianidioms.com</h1>
-            </Link>
-            <div className="authButtons">
-                {
-                    !isLoading && !user && (
-                        <LoginButton />
-                    )
-                }
-                {
-                    !isLoading && user && (
-                        <LoginButton useLogout={true}/>
-                    )
-                }
-                {
-                    !isLoading && user && (
-                        <Link to="/profile" className="authButton">Profile</Link>
-                    )
-                }
-            </div>
-        </header>
-    );
+  return (
+    <header className="fixed top-0 w-full z-[1000] bg-[var(--primary-color)] text-[var(--background-color)] px-2 py-2 flex justify-between items-center border-b-2 border-[var(--secondary-color)] shadow-sm">
+      <Link to="/" className="no-underline text-inherit">
+        <h1 className="ml-4 text-inherit select-text">Russianidioms.com</h1>
+      </Link>
+      <div className="flex gap-4">
+        {!isLoading && !user && <LoginButton />}
+        {!isLoading && user && <LoginButton useLogout={true} />}
+        {!isLoading && user && (
+          <Link
+            to="/profile"
+            className="text-[#61dafb] no-underline text-base border-2 border-[#61dafb] rounded px-4 py-2 transition-all hover:bg-[#61dafb] hover:text-white"
+          >
+            Profile
+          </Link>
+        )}
+      </div>
+    </header>
+  );
 }

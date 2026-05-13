@@ -12,22 +12,22 @@ export default async (req) => {
     });
   }
 
+  const userDoc = await db.collection('users').doc(payload.sub).get();
+  if (!userDoc.exists || !userDoc.data().admin) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
-    const userId = payload.sub;
-    const userDocRef = db.collection('users').doc(userId);
-    const userDoc = await userDocRef.get();
+    const snapshot = await db.collection('idioms')
+      .where('approvalStatus', '==', 'pending')
+      .get();
 
-    if (!userDoc.exists) {
-      return new Response(JSON.stringify({ message: 'User does not exist' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const idioms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    const userData = userDoc.data();
-    const idioms = userData.idioms || [];
-
-    return new Response(JSON.stringify({ idioms }), {
+    return new Response(JSON.stringify(idioms), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

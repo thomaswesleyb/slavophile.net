@@ -6,35 +6,53 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "oxlint --deny-warnings src/ netlify/functions/",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepare": "husky"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.2.4",
-    "@emotion/react": "^11.13.5",
-    "@emotion/styled": "^11.13.5",
-    "@mui/joy": "^5.0.0-beta.48",
-    "@types/auth0": "^3.3.10",
-    "bootstrap": "^5.3.3",
+    "@oxlint/binding-linux-x64-gnu": "^1.64.0",
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.3.0",
     "firebase-admin": "^13.0.1",
+    "jose": "^6.2.3",
     "react": "^18.3.1",
-    "react-bootstrap": "^2.10.6",
     "react-dom": "^18.3.1",
     "react-quizlet-flashcard": "^3.0.0",
-    "react-router-dom": "^7.0.2"
+    "react-router-dom": "^7.15.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.15.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react-swc": "^3.5.0",
-    "eslint": "^9.15.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-react-refresh": "^0.4.14",
-    "globals": "^15.12.0",
+    "happy-dom": "^20.9.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.4",
+    "oxlint": "^1.64.0",
+    "tailwindcss": "^4.3.0",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.15.0",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "vitest": "^4.1.6"
+  },
+  "overrides": {
+    "fast-xml-parser": ">=5.0.0",
+    "protobufjs": ">=7.4.0",
+    "form-data": ">=4.0.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "oxlint --deny-warnings"
+    ],
+    "*.{mjs,js}": [
+      "oxlint --deny-warnings"
+    ]
   }
 }

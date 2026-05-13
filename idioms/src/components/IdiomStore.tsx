@@ -26,8 +26,8 @@ export const IdiomProvider: React.FC<IdiomProviderProps> = ({ children }) => {
                 }
                 const idiomsData = await response.json();
                 setIdioms(idiomsData);
-            } catch (error) {
-                console.error('Error retrieving idioms:', error);
+            } catch {
+                // silently fail - app shows empty state
             } finally {
                 setLoading(false);
             }

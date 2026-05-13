@@ -3,65 +3,69 @@ import './css/MyIdioms.css';
 import { useAuth0 } from "@auth0/auth0-react";
 import { useIdioms } from "../IdiomStore";
 import IdiomsTable from "../IdiomsTable";
+import { Idiom } from "../../types/types";
 
 const MyIdioms = () => {
-    const { user } = useAuth0();
-    const [savedIdioms, setSavedIdioms] = useState([]);
-    const idioms = useIdioms().idioms;// @ts-ignore
-    const submittedIdioms = idioms.filter(idiom => idiom.submittedBy === user.name);
+  const { user, getAccessTokenSilently } = useAuth0();
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [loadingSaved, setLoadingSaved] = useState(true);
+  const { idioms } = useIdioms();
 
-    useEffect(() => {
-        const fetchSavedIdioms = async () => {
-            try {
-                const response = await fetch('/.netlify/functions/firestore-get-user-idioms', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    // @ts-ignore
-                    body: JSON.stringify({ user_id: user.sub })
-                });
-                const userData = await response.json();// @ts-ignore
-                try {
-                    const response = await fetch('/.netlify/functions/firestore-get-idioms', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ idiom_ids: userData.idioms || [] })
-                    });
-                    let idiomData = await response.json();
-                    idiomData = idiomData.filter((idiom: { id: string; }) => userData.idioms.includes(idiom.id));
-                    setSavedIdioms(idiomData || []);
-                } catch (error) {
-                    console.error('Error fetching saved idioms:', error);
-                }
-            } catch (error) {
-                console.error('Error fetching saved idioms:', error);
-            }
-        };
+  const submittedIdioms = idioms.filter(
+    (idiom) => idiom.submittedBy != null && idiom.submittedBy === user?.sub
+  );
 
-        if (user) {
-            fetchSavedIdioms();
-        }
-    }, [user]);
+  const savedIdioms: Idiom[] = idioms.filter(idiom => savedIds.includes(idiom.id));
 
-    return (
-        <div className="idiom-page">
-            <div className="idiom-page-header">
-                <h1>Your personalized idiom page</h1>
-            </div>
+  useEffect(() => {
+    const fetchSavedIds = async () => {
+      if (!user) return;
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await fetch('/.netlify/functions/firestore-get-user-idioms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        setSavedIds(data.idioms || []);
+      } catch {
+        // user sees empty table
+      } finally {
+        setLoadingSaved(false);
+      }
+    };
 
-            <div className="profile-table-container">
-                <h1>Submitted idioms</h1>
-                <IdiomsTable idioms={[...submittedIdioms]} showAuthor={false} showStatus={true}/>
-            </div>
-            <div className="profile-table-container">
-                <h1>Saved idioms</h1>
-                <IdiomsTable idioms={[...savedIdioms]} showAuthor={true}/>
-            </div>
-        </div>
-    );
+    fetchSavedIds();
+  }, [user, getAccessTokenSilently]);
+
+  return (
+    <div className="idiom-page">
+      <div className="idiom-page-header">
+        <h1>Your personalized idiom page</h1>
+      </div>
+
+      <div className="profile-table-container">
+        <h1>Submitted idioms</h1>
+        <IdiomsTable idioms={[...submittedIdioms]} showAuthor={false} showStatus={true} />
+      </div>
+
+      <div className="profile-table-container">
+        <h1>Saved idioms</h1>
+        {loadingSaved ? (
+          <div aria-busy="true" aria-label="Loading idioms">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton-row" />
+            ))}
+          </div>
+        ) : (
+          <IdiomsTable idioms={[...savedIdioms]} showAuthor={true} />
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default MyIdioms;
